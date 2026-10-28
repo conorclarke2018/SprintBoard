@@ -1,0 +1,16 @@
+{
+  "name": "sprintboard",
+  "private": true,
+  "scripts": {
+    "setup": "npm install && npm --prefix frontend install && cd backend && uv sync",
+    "dev": "concurrently -n api,web -c blue,magenta \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev:backend": "cd backend && uv run uvicorn app.main:app --reload --port 8000",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "test": "cd backend && uv run pytest",
+    "seed": "cd backend && uv run python seed.py",
+    "build": "npm --prefix frontend run build"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  }
+}

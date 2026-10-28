@@ -1,0 +1,25 @@
+[project]
+name = "sprintboard"
+version = "0.1.0"
+description = "SprintBoard: a simple sprint and issue board (FastAPI backend)"
+requires-python = ">=3.13"
+dependencies = [
+    "bcrypt>=5.0.0",
+    "fastapi>=0.162.0",
+    "pydantic>=2.14.1",
+    "pydantic-settings>=2.16.1",
+    "pyjwt>=2.15.1",
+    "python-multipart>=0.0.32",
+    "sqlalchemy>=2.1.6",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.16.0",
+    "pytest>=9.2.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
