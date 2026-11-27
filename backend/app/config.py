@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     secret_key: str = "dev-only-secret-key-change-me-in-production"
     access_token_expire_minutes: int = 60 * 8
     log_level: str = "INFO"
+    # Optional: an admin account recreated on every start (e.g. after Render wipes the database).
+    admin_username: str | None = None
+    admin_password: str | None = None
 
 
 settings = Settings()

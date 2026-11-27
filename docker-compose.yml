@@ -1,0 +1,24 @@
+# Run SprintBoard in Docker:
+#   docker compose up --build
+# then open http://localhost:8000
+#
+# Settings (ADMIN_USERNAME, ADMIN_PASSWORD, SECRET_KEY) are read from backend/.env.
+# Copy backend/.env.example to backend/.env and fill it in first.
+
+services:
+  app:
+    build: .
+    image: sprintboard:latest
+    container_name: sprintboard
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    env_file:
+      - path: backend/.env
+        required: false
+    volumes:
+      # Keeps the SQLite database between restarts and rebuilds.
+      - sprintboard-data:/data
+    restart: unless-stopped
+
+volumes:
+  sprintboard-data:

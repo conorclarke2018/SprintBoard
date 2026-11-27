@@ -1,5 +1,3 @@
-"""Test fixtures: a fresh in-memory database and API client for every test."""
-
 from collections.abc import Iterator
 
 import bcrypt

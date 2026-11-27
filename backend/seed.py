@@ -1,11 +1,3 @@
-"""Add demo data (a project with sprints and issues) for the admin account.
-
-No accounts or passwords are created here. Register the first account in the app
-(it becomes the admin), then run this script (from backend/):
-
-    uv run python seed.py
-"""
-
 import sys
 from datetime import date, timedelta
 

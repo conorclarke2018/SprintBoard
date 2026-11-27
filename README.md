@@ -2,7 +2,7 @@
 
 SprintBoard is a lightweight agile project board for small teams. It lets a team keep a product backlog, plan work into sprints and track progress on a To Do / In Progress / Done board, without the cost and complexity of tools such as Jira.
 
-- **Live demo:** _add your Render URL here_ (the first load can take up to a minute while the free server wakes up)
+- **Live demo:** **TODO: add the Render URL after deploying** (the first load can take up to a minute while the free server wakes up)
 - **API documentation:** `/docs` on any running instance (generated automatically by FastAPI)
 
 ---
@@ -12,19 +12,21 @@ SprintBoard is a lightweight agile project board for small teams. It lets a team
 1. [Problem statement](#problem-statement)
 2. [Features](#features)
 3. [User roles](#user-roles)
-4. [Tech stack](#tech-stack)
-5. [Getting started](#getting-started)
-6. [Running the tests](#running-the-tests)
-7. [Project structure](#project-structure)
-8. [Architecture](#architecture)
-9. [Data model](#data-model)
-10. [Validation rules](#validation-rules)
-11. [Error handling and logging](#error-handling-and-logging)
-12. [API reference](#api-reference)
-13. [Configuration](#configuration)
-14. [Deployment (Render)](#deployment-render)
-15. [Continuous integration](#continuous-integration)
-16. [Scope and known limitations](#scope-and-known-limitations)
+4. [User guide](#user-guide)
+5. [Tech stack](#tech-stack)
+6. [Getting started](#getting-started)
+7. [Running with Docker](#running-with-docker)
+8. [Running the tests](#running-the-tests)
+9. [Project structure](#project-structure)
+10. [Architecture](#architecture)
+11. [Data model](#data-model)
+12. [Validation rules](#validation-rules)
+13. [Error handling and logging](#error-handling-and-logging)
+14. [API reference](#api-reference)
+15. [Configuration](#configuration)
+16. [Deployment (Render)](#deployment-render)
+17. [Continuous integration](#continuous-integration)
+18. [Scope and known limitations](#scope-and-known-limitations)
 
 ---
 
@@ -90,6 +92,105 @@ The header shows admins a yellow count of accounts and project requests that are
 
 ---
 
+## User guide
+
+This section explains how to use SprintBoard in the browser. The setup instructions for running it yourself are in [Getting started](#getting-started).
+
+### 1. Create an account and log in
+
+1. Open the app and click **Register** under the login form.
+2. Choose a **username** (3–30 letters, numbers or underscores) and a **password** (at least 8 characters), then type the password again to confirm it.
+3. Click **Create account**.
+   - If you are the **first person** to register, or you use the admin login you were given, you are logged in straight away as the **admin**.
+   - Otherwise you will see *"Account created. You can log in once an admin approves it."* Ask an admin to approve you, then log in.
+4. On the **Log in** page, enter your username and password. If you see *"Your account is waiting for an admin to approve it"*, your account hasn't been approved yet.
+
+You stay logged in when you refresh the page. Use **Log out** in the top-right corner when you're finished.
+
+### 2. Request a project
+
+1. On the **Projects** page, click **Request project**. (Admins see **New project** instead, and their projects are approved straight away.)
+2. Fill in:
+   - **Name:** for example *Company website*.
+   - **Key:** 2–5 letters, such as `WEB`. It appears in every issue id (`WEB-1`, `WEB-2`, and so on) and can't be changed later.
+   - **Description:** optional.
+3. Click **Send request**. The project card shows **Awaiting approval** until an admin reviews it.
+4. When it's approved, the card shows an **Open** button.
+   - If it's **Rejected**, the card shows the admin's reason. Click **Edit & resubmit**, make your changes and save, and it goes back to the admin.
+
+Use **Edit** or **Delete** on a project card to change or remove a project. Deleting a project also deletes all its issues and sprints, and you'll be asked to confirm first.
+
+### 3. Build the backlog
+
+Open a project and go to the **Backlog** tab.
+
+1. Click **Create issue** and fill in:
+   - **Title** (required): what needs to be done.
+   - **Description:** optional details.
+   - **Type:** *Story*, *Task* or *Bug*.
+   - **Priority:** *Low*, *Medium* or *High*.
+   - **Story points:** 1, 2, 3, 5, 8 or 13. Leave it empty if the issue isn't estimated yet.
+   - **Assignee:** who will work on it. Leave it as *Unassigned* if no one is yet.
+   - **Sprint:** leave it as *Backlog (no sprint)* for now.
+2. Click an issue's **title** to edit it, or click **Delete** on its row to remove it.
+
+### 4. Plan a sprint
+
+1. Go to the **Sprints** tab and click **New sprint**.
+2. Give it a **name**, an optional **sprint goal**, and a **start date** and **end date**. The end date must be after the start.
+3. Click **Add issues** next to the planned sprint, or go back to the **Backlog** tab.
+4. Move issues into the sprint in either of these ways:
+   - **Drag** an issue row (use the ⠿ handle on the left) onto the sprint's section.
+   - Use the **Sprint** dropdown on the issue's row.
+
+   You can move issues back to the backlog the same way. Sprints that haven't started can be filled in advance.
+5. When you're ready, go to **Sprints** and click **Start sprint**. Only one sprint per project can be active at a time.
+
+### 5. Work on the board
+
+Go to the **Board** tab to see the active sprint's issues in three columns: **To Do**, **In Progress** and **Done**.
+
+There are three ways to move an issue to a new status:
+- **Mouse:** drag the card to another column.
+- **Touch screen:** press and hold the card, then drag it.
+- **Keyboard:** press Tab to reach a card, Space to pick it up, the arrow keys to move it, and Space to drop it.
+
+Each card also has **← / →** buttons. Click a card's title to edit the issue.
+
+### 6. Complete the sprint
+
+1. On the **Sprints** tab, check each sprint's progress bar (issues done out of the total).
+2. Click **Complete** on the active sprint. The confirmation message tells you how many unfinished issues will go back to the backlog.
+3. Click **Complete sprint**. Done issues stay in the completed sprint, and everything else returns to the backlog, ready for the next sprint.
+
+### 7. Admin tasks
+
+Admins see two extra links in the header. A yellow number shows how many items are waiting.
+
+- **Users:**
+  - New accounts are listed first with an **Awaiting approval** badge. Click **Approve** to let someone log in, or **Reject** to remove the sign-up.
+  - Change anyone's **Role** between *User* and *Admin*, or **Delete** an account. Deleting an account also removes that user's projects.
+  - You can't change your own role or delete yourself.
+- **Requests:**
+  - Each pending project request shows who asked and when.
+  - Click **Approve** to accept it, or **Reject** and optionally give a reason that the user will see.
+
+Admins can also open, edit and delete **every** project from the **Projects** page, which is titled *All projects* for them.
+
+### Messages you might see
+
+| Message | What it means |
+|---|---|
+| *Your account is waiting for an admin to approve it* | Your account exists, but an admin hasn't approved it yet |
+| *Incorrect username or password* | Check your details and try again |
+| *This project has not been approved by an admin yet* | You can't add issues or sprints until the project request is approved |
+| *'Sprint X' is already active. Complete it first.* | Only one sprint per project can be active at a time |
+| *Issues cannot be added to a completed sprint* | Pick a planned or active sprint instead |
+| *Your session has expired. Please log in again* | Your login has timed out (after 8 hours), so log in again |
+| *Cannot reach the server* | The server is offline or still waking up. Wait a moment and try again |
+
+---
+
 ## Tech stack
 
 | Layer | Technology |
@@ -99,7 +200,7 @@ The header shows admins a yellow count of accounts and project requests that are
 | Authentication | bcrypt password hashing, JWT tokens (PyJWT) |
 | Frontend | **React 19 + TypeScript**, Vite, **Mantine** UI components, React Router, dnd-kit (drag and drop) |
 | Testing | pytest with FastAPI's `TestClient` |
-| Tooling | **uv** (Python packages), npm, oxlint, GitHub Actions |
+| Tooling | **uv** (Python packages), npm, oxlint, GitHub Actions, **Docker** / Docker Compose |
 | Hosting | **Render** (free web service) |
 
 In production, FastAPI serves both the API (under `/api`) and the built React app, so the whole system runs as **one service on one URL**.
@@ -141,7 +242,10 @@ During development, Vite forwards any request starting with `/api` to the backen
 
 ### 3. Create the admin account
 
-Open http://localhost:5173/register and create an account. **The first account becomes the admin** and is logged in straight away.
+There are two ways to do this:
+
+- **Register it:** open http://localhost:5173/register and create an account. **The first account becomes the admin** and is logged in straight away.
+- **Set it in `.env`:** copy `backend/.env.example` to `backend/.env` and set `ADMIN_USERNAME` and `ADMIN_PASSWORD`. That admin is created when the app starts (see [Configuration](#configuration)).
 
 ### 4. (Optional) Add demo data
 
@@ -184,6 +288,39 @@ Stop the app, delete `backend/sprintboard.db`, then start it again. A new empty 
 
 ---
 
+## Running with Docker
+
+You can also run the whole app (frontend and backend) in a single container. You only need [Docker](https://docs.docker.com/get-docker/); you don't need Python, uv or Node installed.
+
+```bash
+cp backend/.env.example backend/.env   # then set ADMIN_USERNAME, ADMIN_PASSWORD and SECRET_KEY
+docker compose up --build
+```
+
+Open http://localhost:8000. If you set `ADMIN_USERNAME` and `ADMIN_PASSWORD`, log in with them. Otherwise, the first account you register becomes the admin.
+
+| Command | What it does |
+|---|---|
+| `docker compose up --build -d` | Build the image and start the app in the background |
+| `docker compose logs -f` | Follow the app's logs |
+| `docker compose down` | Stop the app (your data is kept) |
+| `docker compose down -v` | Stop the app **and delete the database volume** |
+| `APP_PORT=9000 docker compose up` | Use a different port on your computer |
+| `docker compose exec app python seed.py` | Add the demo project (needs an admin first) |
+
+**How the image is built** (`Dockerfile`, two stages):
+1. **Frontend stage** (`node:22-alpine`): runs `npm ci` and `npm run build` to produce `frontend/dist`.
+2. **Runtime stage** (`python:3.13-slim`): installs the backend's production packages from `uv.lock` and copies in the built frontend. Uvicorn then serves the API and the website on port 8000.
+
+**Other details**
+- **Database:** stored at `/data/sprintboard.db` inside a named Docker volume (`sprintboard-data`), so it survives restarts and rebuilds.
+- **Security:** the container runs as a non-root user.
+- **Health check:** Docker calls `/api/health` every 30 seconds.
+- **What's left out:** `.dockerignore` keeps `.env`, local databases, logs, tests and `node_modules` out of the image, so no secrets are built into it.
+- **Port:** the container respects a `PORT` environment variable, so the same image works on hosts such as Render.
+
+---
+
 ## Running the tests
 
 ```bash
@@ -192,13 +329,14 @@ npm test
 uv run pytest
 ```
 
-The suite contains **74 tests** and runs in about a second. Each test uses a fresh in-memory SQLite database, so your real data is never touched.
+The suite contains **79 tests** and runs in about a second. Each test uses a fresh in-memory SQLite database, so your real data is never touched.
 
 | File | Covers |
 |---|---|
 | `test_auth.py` | Registration, login, validation, failed-login logging, tokens |
 | `test_account_approval.py` | First user becomes admin, approval required before login |
 | `test_admin.py` | Admin-only endpoints, roles, deleting users |
+| `test_admin_bootstrap.py` | Admin account from `ADMIN_USERNAME` / `ADMIN_PASSWORD` |
 | `test_projects.py` | Project CRUD, key rules, users only seeing their own projects |
 | `test_project_requests.py` | Project request, approve and reject, resubmission |
 | `test_issues.py` | Issue CRUD, numbering, field validation, sprint and assignee checks |
@@ -245,6 +383,9 @@ SprintBoard/
 │   └── vite.config.ts           # Dev proxy /api → http://localhost:8000
 │
 ├── .github/workflows/ci.yml     # Tests + frontend build on every push
+├── Dockerfile                   # Two-stage image: builds the frontend, runs the backend
+├── docker-compose.yml           # Runs the image with a persistent database volume
+├── .dockerignore                # Keeps secrets, local data and node_modules out of the image
 ├── render.yaml                  # Render deployment blueprint
 └── package.json                 # Root scripts (setup, dev, test, seed, build)
 ```
@@ -454,6 +595,12 @@ Settings are read from environment variables or from an optional `backend/.env` 
 | `DATABASE_URL` | `sqlite:///backend/sprintboard.db` | Database location |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `480` (8 hours) | How long a login lasts |
 | `LOG_LEVEL` | `INFO` | Logging detail |
+| `ADMIN_USERNAME` | not set | Optional admin account, created (or restored) **every time the app starts** |
+| `ADMIN_PASSWORD` | not set | Password for that admin (at least 8 characters). Set it only in `backend/.env` or Render's dashboard |
+
+`backend/.env.example` lists these variables. Copy it to `backend/.env` and fill in your own values.
+
+When both admin variables are set, the app makes sure that account exists, is an approved admin and uses that password each time it starts. If the values break a validation rule (e.g. a short password), the app logs an error, skips that step and starts normally. The password itself is never logged.
 
 ---
 
@@ -464,14 +611,16 @@ The app is deployed as a single free **Render web service**, defined in `render.
 - **Build:** builds the React app, installs uv, then installs the Python packages from `uv.lock`
 - **Start:** `uvicorn app.main:app` serves the API and the built frontend on one URL
 - **Health check:** `/api/health`
-- **Environment:** `PYTHON_VERSION=3.13.7`; `SECRET_KEY` is generated by Render
+- **Environment:** `PYTHON_VERSION=3.13.7`; `SECRET_KEY` is generated by Render; `ADMIN_USERNAME` and `ADMIN_PASSWORD` are entered by you
 
-To deploy, push the repository to GitHub. In Render choose **New → Blueprint** and select the repository.
+To deploy, push the repository to GitHub. In Render choose **New → Blueprint** and select the repository. Render then asks for `ADMIN_USERNAME` and `ADMIN_PASSWORD`. They are stored only in Render, never in the repository. You can change them later under **Environment** in the service's settings.
 
 **Free-tier notes**
-- The service **sleeps after about 15 minutes** without visitors, and the next visit takes 30–60 seconds to wake it.
-- Render's free tier has **no permanent disk**, so the SQLite database **resets on every restart or redeploy**.
-- When the database resets, the **next person to register becomes the admin**. After a deploy or restart, register your own admin account straight away.
+- The service **sleeps after 15 minutes** without visitors, and the next visit takes about a minute to wake it.
+- Render's free tier has **no permanent disk**, so the SQLite database is **wiped every time the service sleeps, restarts or redeploys**.
+- Because the admin account is rebuilt from `ADMIN_USERNAME` and `ADMIN_PASSWORD` on every start, **you can always log in as the admin**, even after a wipe. Other accounts and any data created on the hosted site are lost after 15 minutes without visitors.
+- Since the admin always exists, new sign-ups on the hosted site always wait for approval. Nobody else can become admin by registering first.
+- The free tier includes 750 running hours a month, enough to keep one service available all month.
 
 ---
 

@@ -1,0 +1,22 @@
+# Keep the build context small and never copy secrets or local data into the image.
+.git
+.github
+**/node_modules
+**/__pycache__
+**/*.pyc
+backend/.venv
+backend/.pytest_cache
+backend/logs
+backend/*.db
+backend/tests
+**/.env
+frontend/dist
+AGENT.md
+README.md
+render.yaml
+Dockerfile
+docker-compose.yml
+.dockerignore
+.DS_Store
+.vscode
+.idea

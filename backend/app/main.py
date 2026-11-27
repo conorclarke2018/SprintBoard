@@ -12,9 +12,10 @@ from fastapi.staticfiles import StaticFiles
 from app import models  # noqa: F401  (registers all tables)
 from app.config import settings
 from app.core.error_handlers import register_exception_handlers
-from app.database import Base, engine
+from app.database import Base, SessionLocal, engine
 from app.logging_config import setup_logging
 from app.routers import admin, auth, issues, projects, sprints
+from app.services import user_service
 
 FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 
@@ -25,6 +26,9 @@ logger = logging.getLogger("app")
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     Base.metadata.create_all(engine)
+    if settings.admin_username and settings.admin_password:
+        with SessionLocal() as db:
+            user_service.ensure_admin_account(db, settings.admin_username, settings.admin_password)
     logger.info("SprintBoard started")
     yield
 

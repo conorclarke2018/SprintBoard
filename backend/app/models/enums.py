@@ -1,4 +1,3 @@
-"""Fixed lists of allowed values, shared by models, schemas and services."""
 
 from enum import StrEnum
 
