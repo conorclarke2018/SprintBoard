@@ -9,6 +9,7 @@ import { BacklogPage } from './pages/BacklogPage'
 import { BoardPage } from './pages/BoardPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { PeoplePage } from './pages/PeoplePage'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { SprintsPage } from './pages/SprintsPage'
@@ -26,6 +27,7 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route index element={<ProjectsPage />} />
+              <Route path="people" element={<PeoplePage />} />
               <Route path="projects/:projectId" element={<ProjectLayout />}>
                 <Route index element={<Navigate to="backlog" replace />} />
                 <Route path="backlog" element={<BacklogPage />} />

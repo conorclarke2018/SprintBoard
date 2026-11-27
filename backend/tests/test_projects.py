@@ -39,11 +39,25 @@ def test_short_project_name_is_rejected(client, auth_headers):
     assert response.json()["detail"].startswith("Name:")
 
 
-def test_users_only_see_their_own_projects(client, auth_headers, project):
+def test_users_can_see_approved_projects_but_not_others_requests(client, auth_headers, project):
+    pending = client.post(
+        "/api/projects", json={"name": "Secret", "key": "SEC"}, headers=auth_headers
+    ).json()
     bob = login_headers(client, "bob")
-    assert client.get("/api/projects", headers=bob).json() == []
-    assert client.get(f"/api/projects/{project['id']}", headers=bob).status_code == 404
-    assert len(client.get("/api/projects", headers=auth_headers).json()) == 1
+
+    visible = client.get("/api/projects", headers=bob).json()
+    assert [p["key"] for p in visible] == ["SB"]
+    assert client.get(f"/api/projects/{project['id']}", headers=bob).status_code == 200
+    assert client.get(f"/api/projects/{pending['id']}", headers=bob).status_code == 404
+
+
+def test_users_cannot_edit_other_peoples_projects(client, auth_headers, project):
+    bob = login_headers(client, "bob")
+    response = client.put(
+        f"/api/projects/{project['id']}", json={"name": "Taken over"}, headers=bob
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "You can only change your own projects"
 
 
 def test_update_project(client, auth_headers, project):
@@ -57,16 +71,22 @@ def test_update_project(client, auth_headers, project):
     assert response.json()["key"] == "SB"
 
 
-def test_delete_project_also_deletes_its_issues(client, auth_headers, project):
+def test_admin_delete_project_also_deletes_its_issues(client, auth_headers, admin_headers, project):
     issue = client.post(
         f"/api/projects/{project['id']}/issues", json={"title": "Login"}, headers=auth_headers
     ).json()
 
-    response = client.delete(f"/api/projects/{project['id']}", headers=auth_headers)
+    response = client.delete(f"/api/projects/{project['id']}", headers=admin_headers)
 
     assert response.status_code == 204
     assert client.get(f"/api/projects/{project['id']}", headers=auth_headers).status_code == 404
     assert client.get(f"/api/issues/{issue['id']}", headers=auth_headers).status_code == 404
+
+
+def test_regular_user_cannot_delete_own_project(client, auth_headers, project):
+    response = client.delete(f"/api/projects/{project['id']}", headers=auth_headers)
+    assert response.status_code == 403
+    assert client.get(f"/api/projects/{project['id']}", headers=auth_headers).status_code == 200
 
 
 def test_projects_require_login(client):

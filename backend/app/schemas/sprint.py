@@ -25,6 +25,10 @@ class SprintCreate(BaseModel):
         return self
 
 
+class SprintUpdate(SprintCreate):
+    """PUT replaces the sprint's details; its status changes only through start/complete."""
+
+
 class SprintRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

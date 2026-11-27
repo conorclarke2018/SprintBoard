@@ -45,21 +45,24 @@ SprintBoard gives a small team the core agile workflow in one simple web app:
 ### Accounts and access
 - Register and log in with a username and password. Passwords are hashed with bcrypt and sessions use JWT access tokens.
 - The **first account registered becomes the admin**. Every later account must be **approved by an admin** before it can log in.
-- Users only see their own projects. Admins can see and manage everything.
+- Users can **view every approved project** (read-only) and change their own. Admins can see and manage everything.
+- **Only admins can delete.** Regular users can create, read and update.
+- Logging out asks for confirmation first.
 
 ### Projects
 - Users **request** a new project, and an admin **approves** or **rejects** it (optionally giving a reason).
 - A rejected request can be edited and resubmitted.
 - Each project has a short unique **key** (e.g. `SB`), which is used in issue ids such as `SB-12`.
-- Projects can be edited or deleted. Deleting a project also deletes its issues and sprints.
+- Owners and admins can edit a project. Only admins can delete one, which also deletes its issues and sprints.
 
 ### Backlog and issues
-- Create, edit and delete issues (stories, tasks and bugs) with a priority, story points and an assignee.
+- Create and edit issues (stories, tasks and bugs) with a priority, story points and an assignee. Admins can also delete them.
 - The backlog page shows every planned or active sprint plus the backlog itself.
 - **Drag and drop** issues between the backlog and any planned or active sprint, or use the Sprint dropdown on each row.
 
 ### Sprints
-- Create sprints with a name, goal, start date and end date.
+- Create and edit sprints with a name, goal, start date and end date. Completed sprints can't be edited.
+- Admins can delete a sprint. Its issues move back to the backlog rather than being deleted.
 - **Start** a sprint. Only one sprint per project can be active at a time.
 - **Complete** a sprint. Any issue that is not Done is moved back to the backlog automatically.
 - The sprints page shows each sprint's progress (issues done out of the total).
@@ -82,8 +85,11 @@ SprintBoard gives a small team the core agile workflow in one simple web app:
 |---|---|---|
 | Register an account | ✅ (waits for approval) | ✅ (first account only) |
 | Create projects | Sends a **request** | Approved straight away |
-| See and edit own projects, issues and sprints | ✅ | ✅ |
-| See and edit other people's projects | ❌ | ✅ |
+| Create, view and edit own projects, issues and sprints | ✅ | ✅ |
+| View other people's approved projects (read-only) | ✅ | ✅ |
+| Edit other people's projects | ❌ | ✅ |
+| Delete projects, issues and sprints | ❌ | ✅ |
+| See the list of people (**People** page) | ✅ | ✅ (**Users** page) |
 | Approve or reject new accounts | ❌ | ✅ (**Users** page) |
 | Approve or reject project requests | ❌ | ✅ (**Requests** page) |
 | Promote or demote users, delete accounts | ❌ | ✅ (not their own account) |
@@ -175,7 +181,7 @@ Admins see two extra links in the header. A yellow number shows how many items a
   - Each pending project request shows who asked and when.
   - Click **Approve** to accept it, or **Reject** and optionally give a reason that the user will see.
 
-Admins can also open, edit and delete **every** project from the **Projects** page, which is titled *All projects* for them.
+Admins can also open, edit and delete **every** project from the **Projects** page, which is titled *All projects* for them, and edit or delete any sprint from a project's **Sprints** tab.
 
 ### Messages you might see
 
@@ -247,13 +253,20 @@ There are two ways to do this:
 - **Register it:** open http://localhost:5173/register and create an account. **The first account becomes the admin** and is logged in straight away.
 - **Set it in `.env`:** copy `backend/.env.example` to `backend/.env` and set `ADMIN_USERNAME` and `ADMIN_PASSWORD`. That admin is created when the app starts (see [Configuration](#configuration)).
 
-### 4. (Optional) Add demo data
+### 4. Demo data
 
-```bash
-npm run seed
-```
+When the app starts and finds an admin but **no projects**, it loads demo data automatically, so every table has at least 10 records:
 
-This adds a demo project, **SprintBoard Development (`SB`)**, owned by the admin. It includes a completed sprint, an active sprint and a backlog of issues. The script creates no accounts and contains no passwords. It does nothing if the demo project already exists.
+| Table | Records |
+|---|---|
+| Users | 10 demo accounts plus the admin (8 approved, 2 waiting for approval) |
+| Projects | 10 (8 approved, 1 pending, 1 rejected) |
+| Sprints | 12 (completed, active and planned) |
+| Issues | 28 |
+
+Every demo account (`alice`, `ben`, `chloe`, `daniel`, `emma`, `farah`, `george`, `hannah`, `isaac`, `jess`) uses the password **`sprintboard1`**. Log in as `alice` to try the app as a regular user.
+
+If you registered the first account through the app, restart the server (or run `npm run seed`) to load the demo data. Set `LOAD_DEMO_DATA=false` to turn this off.
 
 ### 5. Try the user flow
 
@@ -269,7 +282,7 @@ This adds a demo project, **SprintBoard Development (`SB`)**, owned by the admin
 | `npm run dev` | Start the backend and frontend together |
 | `npm run dev:backend` / `npm run dev:frontend` | Start just one of them |
 | `npm test` | Run the backend test suite |
-| `npm run seed` | Add the demo project for the admin |
+| `npm run seed` | Add the demo data now (only when there are no projects yet) |
 | `npm run build` | Build the frontend into `frontend/dist` |
 | `npm --prefix frontend run lint` | Lint the frontend with oxlint |
 
@@ -306,7 +319,7 @@ Open http://localhost:8000. If you set `ADMIN_USERNAME` and `ADMIN_PASSWORD`, lo
 | `docker compose down` | Stop the app (your data is kept) |
 | `docker compose down -v` | Stop the app **and delete the database volume** |
 | `APP_PORT=9000 docker compose up` | Use a different port on your computer |
-| `docker compose exec app python seed.py` | Add the demo project (needs an admin first) |
+| `docker compose exec app python seed.py` | Add the demo data now (needs an admin first) |
 
 **How the image is built** (`Dockerfile`, two stages):
 1. **Frontend stage** (`node:22-alpine`): runs `npm ci` and `npm run build` to produce `frontend/dist`.
@@ -354,10 +367,11 @@ SprintBoard/
 │   │   ├── main.py              # Creates the app, registers routers and error handlers, serves frontend/dist
 │   │   ├── config.py            # Settings from environment variables / .env
 │   │   ├── database.py          # SQLAlchemy engine, session, get_db dependency
+│   │   ├── demo_data.py         # Demo records (10+ per table), loaded on startup
 │   │   ├── logging_config.py    # Console + logs/app.log
 │   │   ├── core/
 │   │   │   ├── security.py      # bcrypt hashing, JWT create/verify
-│   │   │   ├── dependencies.py  # Current user, admin-only, owned/approved project
+│   │   │   ├── dependencies.py  # Current user, admin-only, visible/managed project
 │   │   │   ├── exceptions.py    # Domain errors (NotFound, Conflict, Forbidden, ...)
 │   │   │   └── error_handlers.py# Global handlers: log + clear JSON message
 │   │   ├── models/              # SQLAlchemy tables: user, project, sprint, issue, enums
@@ -365,7 +379,7 @@ SprintBoard/
 │   │   ├── services/            # Business rules (auth, user, project, sprint, issue)
 │   │   └── routers/             # Thin HTTP layer: auth, projects, issues, sprints, admin
 │   ├── tests/                   # pytest suite (see above)
-│   ├── seed.py                  # Optional demo data for the admin
+│   ├── seed.py                  # Load the demo data by hand
 │   ├── pyproject.toml / uv.lock # Python dependencies (managed with uv)
 │   └── sprintboard.db           # SQLite database (created on first run)
 │
@@ -377,7 +391,7 @@ SprintBoard/
 │   │   ├── context/             # AuthContext (current user, login, logout)
 │   │   ├── hooks/               # Project data loading, drag sensors, pending counts
 │   │   ├── components/          # Layouts, forms, tables, board columns, cards
-│   │   ├── pages/               # Login, Register, Projects, Backlog, Sprints, Board, Admin pages
+│   │   ├── pages/               # Login, Register, Projects, People, Backlog, Sprints, Board, Admin pages
 │   │   ├── types/               # TypeScript types matching the Pydantic schemas
 │   │   └── utils/               # Labels/colours, validation rules, notifications
 │   └── vite.config.ts           # Dev proxy /api → http://localhost:8000
@@ -550,20 +564,24 @@ Every endpoint except register, login and health requires an `Authorization: Bea
 ### Projects
 | Method | Path | Description |
 |---|---|---|
-| GET | `/api/projects` | Your projects (admins: all projects) |
+| GET | `/api/projects` | Every approved project plus your own requests (admins: all projects) |
 | POST | `/api/projects` | Create a project (users: creates a request) |
-| GET / PUT / DELETE | `/api/projects/{id}` | View, edit (resubmits a rejected request) or delete a project |
+| GET / PUT | `/api/projects/{id}` | View a project, or edit your own (resubmits a rejected request) |
+| DELETE | `/api/projects/{id}` | Delete a project (**admins only**) |
 
 ### Issues
 | Method | Path | Description |
 |---|---|---|
 | GET / POST | `/api/projects/{id}/issues` | List or create issues (approved projects only) |
-| GET / PUT / DELETE | `/api/issues/{id}` | View, update (incl. status and sprint) or delete an issue |
+| GET / PUT | `/api/issues/{id}` | View an issue, or update one in your own project (incl. status and sprint) |
+| DELETE | `/api/issues/{id}` | Delete an issue (**admins only**) |
 
 ### Sprints
 | Method | Path | Description |
 |---|---|---|
 | GET / POST | `/api/projects/{id}/sprints` | List or create sprints (approved projects only) |
+| PUT | `/api/sprints/{id}` | Edit a sprint's name, goal and dates (not completed sprints) |
+| DELETE | `/api/sprints/{id}` | Delete a sprint; its issues go back to the backlog (**admins only**) |
 | POST | `/api/sprints/{id}/start` | Start a planned sprint |
 | POST | `/api/sprints/{id}/complete` | Complete the active sprint; returns how many issues went back to the backlog |
 
@@ -597,6 +615,7 @@ Settings are read from environment variables or from an optional `backend/.env` 
 | `LOG_LEVEL` | `INFO` | Logging detail |
 | `ADMIN_USERNAME` | not set | Optional admin account, created (or restored) **every time the app starts** |
 | `ADMIN_PASSWORD` | not set | Password for that admin (at least 8 characters). Set it only in `backend/.env` or Render's dashboard |
+| `LOAD_DEMO_DATA` | `true` | Load the demo data on startup when an admin exists and there are no projects |
 
 `backend/.env.example` lists these variables. Copy it to `backend/.env` and fill in your own values.
 
@@ -618,7 +637,7 @@ To deploy, push the repository to GitHub. In Render choose **New → Blueprint**
 **Free-tier notes**
 - The service **sleeps after 15 minutes** without visitors, and the next visit takes about a minute to wake it.
 - Render's free tier has **no permanent disk**, so the SQLite database is **wiped every time the service sleeps, restarts or redeploys**.
-- Because the admin account is rebuilt from `ADMIN_USERNAME` and `ADMIN_PASSWORD` on every start, **you can always log in as the admin**, even after a wipe. Other accounts and any data created on the hosted site are lost after 15 minutes without visitors.
+- Because the admin account is rebuilt from `ADMIN_USERNAME` and `ADMIN_PASSWORD` on every start, **you can always log in as the admin**, even after a wipe. Other accounts and any data created on the hosted site are lost after 15 minutes without visitors, but the **demo data is loaded again on every start**, so the hosted site always has at least 10 records in every table.
 - Since the admin always exists, new sign-ups on the hosted site always wait for approval. Nobody else can become admin by registering first.
 - The free tier includes 750 running hours a month, enough to keep one service available all month.
 

@@ -7,9 +7,10 @@ interface IssueCardProps {
   issue: Issue
   onEdit: (issue: Issue) => void
   onMove: (issue: Issue, status: IssueStatus) => void
+  readOnly?: boolean
 }
 
-export function IssueCard({ issue, onEdit, onMove }: IssueCardProps) {
+export function IssueCard({ issue, onEdit, onMove, readOnly = false }: IssueCardProps) {
   const index = STATUS_OPTIONS.findIndex((option) => option.value === issue.status)
   const previous = STATUS_OPTIONS[index - 1]
   const next = STATUS_OPTIONS[index + 1]
@@ -24,9 +25,15 @@ export function IssueCard({ issue, onEdit, onMove }: IssueCardProps) {
           <TypeBadge type={issue.type} />
         </Group>
 
-        <Anchor component="button" type="button" fw={500} size="sm" ta="left" c="inherit" onClick={() => onEdit(issue)}>
-          {issue.title}
-        </Anchor>
+        {readOnly ? (
+          <Text fw={500} size="sm">
+            {issue.title}
+          </Text>
+        ) : (
+          <Anchor component="button" type="button" fw={500} size="sm" ta="left" c="inherit" onClick={() => onEdit(issue)}>
+            {issue.title}
+          </Anchor>
+        )}
 
         <Group gap={6}>
           <PriorityBadge priority={issue.priority} />
@@ -36,20 +43,22 @@ export function IssueCard({ issue, onEdit, onMove }: IssueCardProps) {
           </Text>
         </Group>
 
-        <Group gap={6} justify="space-between">
-          {previous ? (
-            <Button size="compact-xs" variant="default" onClick={() => onMove(issue, previous.value)}>
-              ← {previous.label}
-            </Button>
-          ) : (
-            <span />
-          )}
-          {next && (
-            <Button size="compact-xs" variant="light" onClick={() => onMove(issue, next.value)}>
-              {next.label} →
-            </Button>
-          )}
-        </Group>
+        {!readOnly && (
+          <Group gap={6} justify="space-between">
+            {previous ? (
+              <Button size="compact-xs" variant="default" onClick={() => onMove(issue, previous.value)}>
+                ← {previous.label}
+              </Button>
+            ) : (
+              <span />
+            )}
+            {next && (
+              <Button size="compact-xs" variant="light" onClick={() => onMove(issue, next.value)}>
+                {next.label} →
+              </Button>
+            )}
+          </Group>
+        )}
       </Stack>
     </Card>
   )

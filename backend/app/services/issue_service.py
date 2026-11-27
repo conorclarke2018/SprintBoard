@@ -9,14 +9,15 @@ from app.core.exceptions import BusinessRuleError, NotFoundError
 from app.models import Issue, Project, Sprint, User
 from app.models.enums import SprintStatus
 from app.schemas.issue import IssueCreate, IssueUpdate
-from app.services.project_service import can_manage
+from app.services.project_service import can_view
 
 logger = logging.getLogger(__name__)
 
 
 def get_issue(db: Session, issue_id: int, user: User) -> Issue:
+    """Find an issue the user is allowed to see."""
     issue = db.get(Issue, issue_id)
-    if issue is None or not can_manage(issue.project, user):
+    if issue is None or not can_view(issue.project, user):
         raise NotFoundError("Issue not found")
     return issue
 

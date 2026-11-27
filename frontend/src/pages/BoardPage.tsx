@@ -7,7 +7,7 @@ import { BoardColumn } from '../components/BoardColumn'
 import { IssueCard } from '../components/IssueCard'
 import { IssueFormModal } from '../components/IssueFormModal'
 import { PageLoader } from '../components/PageLoader'
-import { useCurrentProject } from '../components/ProjectLayout'
+import { useCurrentProject, useProjectAccess } from '../components/ProjectLayout'
 import { useDragSensors } from '../hooks/useDragSensors'
 import { useProjectData } from '../hooks/useProjectData'
 import type { Issue, IssueStatus } from '../types'
@@ -15,6 +15,7 @@ import { STATUS_OPTIONS, findOption, formatDate } from '../utils/constants'
 
 export function BoardPage() {
   const project = useCurrentProject()
+  const { canEdit } = useProjectAccess()
   const { issues, sprints, users, activeSprint, loading, reload, updateIssue } = useProjectData(project.id)
   const [editing, setEditing] = useState<Issue | null>(null)
   const [dragged, setDragged] = useState<Issue | null>(null)
@@ -28,7 +29,7 @@ export function BoardPage() {
       <Paper withBorder p="xl" ta="center">
         <Text fw={500}>No active sprint</Text>
         <Text c="dimmed" size="sm" mb="md">
-          Start a sprint to see its issues on the board.
+          {canEdit ? 'Start a sprint to see its issues on the board.' : 'This project has no sprint in progress.'}
         </Text>
         <Button component={Link} to="../sprints">
           Go to sprints
@@ -66,13 +67,15 @@ export function BoardPage() {
           </Text>
         </div>
         <Button variant="default" component={Link} to="../sprints">
-          Manage sprints
+          {canEdit ? 'Manage sprints' : 'View sprints'}
         </Button>
       </Group>
 
-      <Text size="sm" c="dimmed">
-        Drag a card to another column to change its status.
-      </Text>
+      {canEdit && (
+        <Text size="sm" c="dimmed">
+          Drag a card to another column to change its status.
+        </Text>
+      )}
 
       <DndContext
         sensors={sensors}
@@ -90,6 +93,7 @@ export function BoardPage() {
               issues={sprintIssues.filter((issue) => issue.status === column.value)}
               onEdit={setEditing}
               onMove={moveIssue}
+              readOnly={!canEdit}
             />
           ))}
         </SimpleGrid>

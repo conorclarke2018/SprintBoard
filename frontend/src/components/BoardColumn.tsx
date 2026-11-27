@@ -10,9 +10,10 @@ interface BoardColumnProps {
   issues: Issue[]
   onEdit: (issue: Issue) => void
   onMove: (issue: Issue, status: IssueStatus) => void
+  readOnly?: boolean
 }
 
-export function BoardColumn({ status, label, color, issues, onEdit, onMove }: BoardColumnProps) {
+export function BoardColumn({ status, label, color, issues, onEdit, onMove, readOnly = false }: BoardColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status })
 
   return (
@@ -43,7 +44,7 @@ export function BoardColumn({ status, label, color, issues, onEdit, onMove }: Bo
           </Text>
         ) : (
           issues.map((issue) => (
-            <DraggableIssueCard key={issue.id} issue={issue} onEdit={onEdit} onMove={onMove} />
+            <DraggableIssueCard key={issue.id} issue={issue} onEdit={onEdit} onMove={onMove} readOnly={readOnly} />
           ))
         )}
       </Stack>
@@ -51,11 +52,19 @@ export function BoardColumn({ status, label, color, issues, onEdit, onMove }: Bo
   )
 }
 
-function DraggableIssueCard({ issue, onEdit, onMove }: Omit<BoardColumnProps, 'status' | 'label' | 'color' | 'issues'> & { issue: Issue }) {
+function DraggableIssueCard({
+  issue,
+  onEdit,
+  onMove,
+  readOnly = false,
+}: Omit<BoardColumnProps, 'status' | 'label' | 'color' | 'issues'> & { issue: Issue }) {
   const { setNodeRef, attributes, listeners, isDragging } = useDraggable({
     id: issue.id,
     data: { issue },
+    disabled: readOnly,
   })
+
+  if (readOnly) return <IssueCard issue={issue} onEdit={onEdit} onMove={onMove} readOnly />
 
   return (
     <div

@@ -1,4 +1,4 @@
-"""Shared FastAPI dependencies: database session, current user and owned project."""
+"""Shared FastAPI dependencies: database session, current user and project access."""
 
 from typing import Annotated
 
@@ -43,15 +43,34 @@ def get_current_admin(user: CurrentUser) -> User:
 AdminUser = Annotated[User, Depends(get_current_admin)]
 
 
-def get_owned_project(project_id: int, db: DbSession, user: CurrentUser) -> Project:
+def get_visible_project(project_id: int, db: DbSession, user: CurrentUser) -> Project:
+    """A project the user may look at (their own, or any approved project)."""
     return project_service.get_project(db, project_id, user)
 
 
-OwnedProject = Annotated[Project, Depends(get_owned_project)]
+VisibleProject = Annotated[Project, Depends(get_visible_project)]
 
 
-def get_approved_project(project: OwnedProject) -> Project:
+def get_managed_project(project: VisibleProject, user: CurrentUser) -> Project:
+    """A project the user may change (admins and the owner)."""
+    project_service.require_manage(project, user)
+    return project
+
+
+ManagedProject = Annotated[Project, Depends(get_managed_project)]
+
+
+def get_approved_project(project: VisibleProject) -> Project:
+    """A visible project whose issues and sprints can be read."""
     return project_service.require_approved(project)
 
 
 ApprovedProject = Annotated[Project, Depends(get_approved_project)]
+
+
+def get_managed_approved_project(project: ManagedProject) -> Project:
+    """An approved project the user may add issues and sprints to."""
+    return project_service.require_approved(project)
+
+
+ManagedApprovedProject = Annotated[Project, Depends(get_managed_approved_project)]

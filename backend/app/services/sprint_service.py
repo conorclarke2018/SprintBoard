@@ -8,15 +8,16 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import BusinessRuleError, ConflictError, NotFoundError
 from app.models import Project, Sprint, User
 from app.models.enums import IssueStatus, SprintStatus
-from app.schemas.sprint import SprintCreate
-from app.services.project_service import can_manage
+from app.schemas.sprint import SprintCreate, SprintUpdate
+from app.services.project_service import can_view
 
 logger = logging.getLogger(__name__)
 
 
 def get_sprint(db: Session, sprint_id: int, user: User) -> Sprint:
+    """Find a sprint the user is allowed to see."""
     sprint = db.get(Sprint, sprint_id)
-    if sprint is None or not can_manage(sprint.project, user):
+    if sprint is None or not can_view(sprint.project, user):
         raise NotFoundError("Sprint not found")
     return sprint
 
@@ -28,6 +29,30 @@ def create_sprint(db: Session, project: Project, data: SprintCreate) -> Sprint:
     db.refresh(sprint)
     logger.info("Sprint '%s' created in %s", sprint.name, project.key)
     return sprint
+
+
+def update_sprint(db: Session, sprint: Sprint, data: SprintUpdate) -> Sprint:
+    """Change a sprint's name, goal or dates. Completed sprints are kept as a record."""
+    if sprint.status == SprintStatus.COMPLETED:
+        raise BusinessRuleError("A completed sprint cannot be edited")
+
+    for field, value in data.model_dump().items():
+        setattr(sprint, field, value)
+    db.commit()
+    db.refresh(sprint)
+    logger.info("Sprint '%s' updated in %s", sprint.name, sprint.project.key)
+    return sprint
+
+
+def delete_sprint(db: Session, sprint: Sprint) -> int:
+    """Delete a sprint and return its issues to the backlog. Returns how many moved."""
+    moved = len(sprint.issues)
+    for issue in sprint.issues:
+        issue.sprint = None
+    logger.info("Sprint '%s' deleted from %s; %d issue(s) returned to backlog", sprint.name, sprint.project.key, moved)
+    db.delete(sprint)
+    db.commit()
+    return moved
 
 
 def start_sprint(db: Session, sprint: Sprint) -> Sprint:

@@ -1,3 +1,6 @@
+from tests.conftest import login_headers
+
+
 def start(client, headers, sprint):
     return client.post(f"/api/sprints/{sprint['id']}/start", headers=headers)
 
@@ -99,3 +102,51 @@ def test_sprint_counts_issues(client, auth_headers, project, sprint):
     sprints = client.get(f"/api/projects/{project['id']}/sprints", headers=auth_headers).json()
     assert sprints[0]["issue_count"] == 2
     assert sprints[0]["done_count"] == 1
+
+
+def update(client, headers, sprint, **changes):
+    body = {"name": sprint["name"], "start_date": sprint["start_date"], "end_date": sprint["end_date"]}
+    return client.put(f"/api/sprints/{sprint['id']}", json={**body, **changes}, headers=headers)
+
+
+def test_owner_can_edit_sprint(client, auth_headers, sprint):
+    response = update(client, auth_headers, sprint, name="Sprint One", goal="Ship login")
+    assert response.status_code == 200
+    assert response.json()["name"] == "Sprint One"
+    assert response.json()["goal"] == "Ship login"
+    assert response.json()["status"] == "planned"
+
+
+def test_edit_sprint_is_validated(client, auth_headers, sprint):
+    response = update(client, auth_headers, sprint, end_date=sprint["start_date"])
+    assert response.status_code == 422
+    assert response.json()["detail"] == "End date must be after the start date"
+
+
+def test_completed_sprint_cannot_be_edited(client, auth_headers, sprint):
+    start(client, auth_headers, sprint)
+    complete(client, auth_headers, sprint)
+    response = update(client, auth_headers, sprint, name="Rewritten")
+    assert response.status_code == 400
+    assert response.json()["detail"] == "A completed sprint cannot be edited"
+
+
+def test_other_users_cannot_edit_or_start_sprint(client, sprint):
+    bob = login_headers(client, "bob")
+    assert update(client, bob, sprint, name="Bob's sprint").status_code == 403
+    assert start(client, bob, sprint).status_code == 403
+
+
+def test_admin_delete_sprint_returns_issues_to_backlog(client, auth_headers, admin_headers, project, sprint):
+    issue = add_issue(client, auth_headers, project, sprint)
+
+    response = client.delete(f"/api/sprints/{sprint['id']}", headers=admin_headers)
+
+    assert response.status_code == 204
+    assert client.get(f"/api/projects/{project['id']}/sprints", headers=auth_headers).json() == []
+    assert client.get(f"/api/issues/{issue['id']}", headers=auth_headers).json()["sprint_id"] is None
+
+
+def test_regular_user_cannot_delete_sprint(client, auth_headers, sprint):
+    response = client.delete(f"/api/sprints/{sprint['id']}", headers=auth_headers)
+    assert response.status_code == 403

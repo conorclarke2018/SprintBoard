@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     # Optional: an admin account recreated on every start (e.g. after Render wipes the database).
     admin_username: str | None = None
     admin_password: str | None = None
+    # Load the demo data (10+ records per table) on startup when there are no projects yet.
+    load_demo_data: bool = True
 
 
 settings = Settings()

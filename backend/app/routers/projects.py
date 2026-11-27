@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status
 
-from app.core.dependencies import CurrentUser, DbSession, OwnedProject
+from app.core.dependencies import AdminUser, CurrentUser, DbSession, ManagedProject, VisibleProject
 from app.schemas.project import ProjectCreate, ProjectRead, ProjectUpdate
 from app.services import project_service
 
@@ -18,15 +18,16 @@ def create_project(data: ProjectCreate, db: DbSession, user: CurrentUser):
 
 
 @router.get("/{project_id}", response_model=ProjectRead)
-def get_project(project: OwnedProject):
+def get_project(project: VisibleProject):
     return project
 
 
 @router.put("/{project_id}", response_model=ProjectRead)
-def update_project(data: ProjectUpdate, project: OwnedProject, db: DbSession, user: CurrentUser):
+def update_project(data: ProjectUpdate, project: ManagedProject, db: DbSession, user: CurrentUser):
     return project_service.update_project(db, project, data, user)
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_project(project: OwnedProject, db: DbSession):
+def delete_project(project: VisibleProject, db: DbSession, _admin: AdminUser):
+    """Admins only: regular users can create, read and update but not delete."""
     project_service.delete_project(db, project)

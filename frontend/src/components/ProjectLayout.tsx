@@ -3,11 +3,16 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { projectsApi } from '../api/projects'
+import { useAuth } from '../context/AuthContext'
 import type { Project } from '../types'
 import { PageLoader } from './PageLoader'
 
 interface ProjectOutletContext {
   project: Project
+  /** Admins and the owner can change the project; everyone else gets a read-only view. */
+  canEdit: boolean
+  /** Only admins can delete records. */
+  isAdmin: boolean
 }
 
 const TABS = [
@@ -22,6 +27,7 @@ export function ProjectLayout() {
   const validId = Number.isInteger(id)
   const navigate = useNavigate()
   const location = useLocation()
+  const { user } = useAuth()
   const [project, setProject] = useState<Project | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const error = validId ? loadError : 'Project not found'
@@ -59,6 +65,8 @@ export function ProjectLayout() {
   }
 
   const currentTab = location.pathname.split('/').pop()
+  const isAdmin = user?.role === 'admin'
+  const canEdit = isAdmin || project.owner.id === user?.id
 
   return (
     <Stack gap="md">
@@ -74,7 +82,19 @@ export function ProjectLayout() {
         <Badge variant="light" size="lg">
           {project.key}
         </Badge>
+        {!canEdit && (
+          <Badge color="gray" variant="outline" size="lg">
+            Read only
+          </Badge>
+        )}
       </Group>
+
+      {!canEdit && (
+        <Text size="sm" c="dimmed">
+          This project belongs to {project.owner.username}. You can look around, but only the owner or an admin can make
+          changes.
+        </Text>
+      )}
 
       <Tabs value={currentTab} onChange={(tab) => tab && navigate(tab)}>
         <Tabs.List>
@@ -86,7 +106,7 @@ export function ProjectLayout() {
         </Tabs.List>
       </Tabs>
 
-      <Outlet context={{ project } satisfies ProjectOutletContext} />
+      <Outlet context={{ project, canEdit, isAdmin } satisfies ProjectOutletContext} />
     </Stack>
   )
 }
@@ -94,4 +114,10 @@ export function ProjectLayout() {
 // eslint-disable-next-line react-refresh/only-export-components
 export function useCurrentProject(): Project {
   return useOutletContext<ProjectOutletContext>().project
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function useProjectAccess(): { canEdit: boolean; isAdmin: boolean } {
+  const { canEdit, isAdmin } = useOutletContext<ProjectOutletContext>()
+  return { canEdit, isAdmin }
 }

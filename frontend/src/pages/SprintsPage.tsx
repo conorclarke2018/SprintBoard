@@ -5,7 +5,7 @@ import { sprintsApi } from '../api/sprints'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { SprintStatusBadge } from '../components/IssueBadges'
 import { PageLoader } from '../components/PageLoader'
-import { useCurrentProject } from '../components/ProjectLayout'
+import { useCurrentProject, useProjectAccess } from '../components/ProjectLayout'
 import { SprintFormModal } from '../components/SprintFormModal'
 import { useProjectData } from '../hooks/useProjectData'
 import type { Sprint } from '../types'
@@ -14,11 +14,29 @@ import { notifyError, notifySuccess } from '../utils/notify'
 
 export function SprintsPage() {
   const project = useCurrentProject()
+  const { canEdit, isAdmin } = useProjectAccess()
   const { sprints, activeSprint, loading, reload } = useProjectData(project.id)
   const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<Sprint | null>(null)
   const [completing, setCompleting] = useState<Sprint | null>(null)
+  const [deleting, setDeleting] = useState<Sprint | null>(null)
 
   if (loading) return <PageLoader />
+
+  function openForm(sprint: Sprint | null) {
+    setEditing(sprint)
+    setFormOpen(true)
+  }
+
+  async function deleteSprint(sprint: Sprint) {
+    await sprintsApi.remove(sprint.id)
+    notifySuccess(
+      sprint.issue_count === 0
+        ? `${sprint.name} deleted`
+        : `${sprint.name} deleted. Its ${sprint.issue_count} ${sprint.issue_count === 1 ? 'issue was' : 'issues were'} moved to the backlog`,
+    )
+    await reload()
+  }
 
   async function startSprint(sprint: Sprint) {
     try {
@@ -47,7 +65,7 @@ export function SprintsPage() {
     <Stack>
       <Group justify="space-between">
         <Title order={3}>Sprints</Title>
-        <Button onClick={() => setFormOpen(true)}>New sprint</Button>
+        {canEdit && <Button onClick={() => openForm(null)}>New sprint</Button>}
       </Group>
 
       {sprints.length === 0 ? (
@@ -66,7 +84,7 @@ export function SprintsPage() {
                 <Table.Th>Dates</Table.Th>
                 <Table.Th>Status</Table.Th>
                 <Table.Th w={180}>Progress</Table.Th>
-                <Table.Th w={200} />
+                <Table.Th w={330} />
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -100,12 +118,12 @@ export function SprintsPage() {
                   </Table.Td>
                   <Table.Td>
                     <Group gap="xs" justify="flex-end">
-                      {sprint.status === 'planned' && (
+                      {canEdit && sprint.status === 'planned' && (
                         <Button size="xs" variant="default" component={Link} to="../backlog">
                           Add issues
                         </Button>
                       )}
-                      {sprint.status === 'planned' && (
+                      {canEdit && sprint.status === 'planned' && (
                         <Tooltip
                           label={`Complete ${activeSprint?.name} first`}
                           disabled={!activeSprint}
@@ -116,14 +134,24 @@ export function SprintsPage() {
                         </Tooltip>
                       )}
                       {sprint.status === 'active' && (
-                        <>
-                          <Button size="xs" variant="default" component={Link} to="../board">
-                            View board
-                          </Button>
-                          <Button size="xs" color="green" onClick={() => setCompleting(sprint)}>
-                            Complete
-                          </Button>
-                        </>
+                        <Button size="xs" variant="default" component={Link} to="../board">
+                          View board
+                        </Button>
+                      )}
+                      {canEdit && sprint.status === 'active' && (
+                        <Button size="xs" color="green" onClick={() => setCompleting(sprint)}>
+                          Complete
+                        </Button>
+                      )}
+                      {canEdit && sprint.status !== 'completed' && (
+                        <Button size="xs" variant="default" onClick={() => openForm(sprint)}>
+                          Edit
+                        </Button>
+                      )}
+                      {isAdmin && (
+                        <Button size="xs" variant="subtle" color="red" onClick={() => setDeleting(sprint)}>
+                          Delete
+                        </Button>
                       )}
                     </Group>
                   </Table.Td>
@@ -138,6 +166,7 @@ export function SprintsPage() {
         opened={formOpen}
         projectId={project.id}
         suggestedName={`Sprint ${sprints.length + 1}`}
+        sprint={editing}
         onClose={() => setFormOpen(false)}
         onSaved={reload}
       />
@@ -153,6 +182,18 @@ export function SprintsPage() {
         color="green"
         onConfirm={() => completeSprint(completing!)}
         onClose={() => setCompleting(null)}
+      />
+      <ConfirmModal
+        opened={deleting !== null}
+        title={`Delete ${deleting?.name ?? 'sprint'}?`}
+        message={
+          deleting && deleting.issue_count > 0
+            ? `${deleting.name} will be permanently deleted. Its ${deleting.issue_count} ${deleting.issue_count === 1 ? 'issue' : 'issues'} will move to the backlog.`
+            : `${deleting?.name ?? 'This sprint'} will be permanently deleted.`
+        }
+        confirmLabel="Delete sprint"
+        onConfirm={() => deleteSprint(deleting!)}
+        onClose={() => setDeleting(null)}
       />
     </Stack>
   )

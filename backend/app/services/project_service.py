@@ -1,8 +1,14 @@
-"""Project rules: users request projects, admins approve or reject them and can manage every project."""
+"""Project rules: users request projects, admins approve or reject them and can manage every project.
+
+Access rules:
+- view:   admins, the owner, or anyone once the project is approved (read-only for non-owners)
+- manage: admins and the owner (create, read and update)
+- delete: admins only (enforced in the routers with the AdminUser dependency)
+"""
 
 import logging
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import BusinessRuleError, ConflictError, ForbiddenError, NotFoundError
@@ -14,14 +20,28 @@ logger = logging.getLogger(__name__)
 
 
 def can_manage(project: Project, user: User) -> bool:
-    """The single access rule for a project and everything inside it."""
+    """Who may change a project and everything inside it."""
     return user.is_admin or project.owner_id == user.id
 
 
+def can_view(project: Project, user: User) -> bool:
+    """Who may see a project. Approved projects are visible to every logged-in user."""
+    return can_manage(project, user) or project.is_approved
+
+
+def require_manage(project: Project, user: User) -> None:
+    """Raise if the user may see the project but not change it."""
+    if not can_manage(project, user):
+        raise ForbiddenError("You can only change your own projects")
+
+
 def list_projects(db: Session, user: User) -> list[Project]:
+    """Admins see everything; users see every approved project plus their own requests."""
     query = select(Project).order_by(Project.name)
     if not user.is_admin:
-        query = query.where(Project.owner_id == user.id)
+        query = query.where(
+            or_(Project.owner_id == user.id, Project.status == ProjectStatus.APPROVED)
+        )
     return list(db.scalars(query))
 
 
@@ -32,8 +52,8 @@ def list_requests(db: Session) -> list[Project]:
 
 def get_project(db: Session, project_id: int, user: User) -> Project:
     project = db.get(Project, project_id)
-    # Report "not found" rather than "forbidden" so other users' projects stay hidden.
-    if project is None or not can_manage(project, user):
+    # Report "not found" rather than "forbidden" so other users' pending requests stay hidden.
+    if project is None or not can_view(project, user):
         raise NotFoundError("Project not found")
     return project
 

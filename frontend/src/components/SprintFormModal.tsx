@@ -2,6 +2,7 @@ import { Button, Group, Modal, Stack, TextInput, Textarea } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { useState } from 'react'
 import { sprintsApi } from '../api/sprints'
+import type { Sprint } from '../types'
 import { isoDate } from '../utils/constants'
 import { notifyError, notifySuccess } from '../utils/notify'
 import { lengthBetween, maxLength, required } from '../utils/validation'
@@ -10,26 +11,28 @@ interface SprintFormModalProps {
   opened: boolean
   projectId: number
   suggestedName: string
+  /** The sprint to edit, or null to create a new one. */
+  sprint?: Sprint | null
   onClose: () => void
   onSaved: () => void
 }
 
 export function SprintFormModal({ opened, onClose, ...props }: SprintFormModalProps) {
   return (
-    <Modal opened={opened} onClose={onClose} title="New sprint">
+    <Modal opened={opened} onClose={onClose} title={props.sprint ? `Edit ${props.sprint.name}` : 'New sprint'}>
       {opened && <SprintForm onClose={onClose} {...props} />}
     </Modal>
   )
 }
 
-function SprintForm({ projectId, suggestedName, onClose, onSaved }: Omit<SprintFormModalProps, 'opened'>) {
+function SprintForm({ projectId, suggestedName, sprint = null, onClose, onSaved }: Omit<SprintFormModalProps, 'opened'>) {
   const [saving, setSaving] = useState(false)
   const form = useForm({
     initialValues: {
-      name: suggestedName,
-      goal: '',
-      start_date: isoDate(),
-      end_date: isoDate(13),
+      name: sprint?.name ?? suggestedName,
+      goal: sprint?.goal ?? '',
+      start_date: sprint?.start_date ?? isoDate(),
+      end_date: sprint?.end_date ?? isoDate(13),
     },
     validate: {
       name: lengthBetween('Name', 3, 60),
@@ -44,12 +47,14 @@ function SprintForm({ projectId, suggestedName, onClose, onSaved }: Omit<SprintF
   async function handleSubmit(values: typeof form.values) {
     setSaving(true)
     try {
-      await sprintsApi.create(projectId, {
-        ...values,
-        name: values.name.trim(),
-        goal: values.goal.trim() || null,
-      })
-      notifySuccess(`${values.name.trim()} created`)
+      const input = { ...values, name: values.name.trim(), goal: values.goal.trim() || null }
+      if (sprint) {
+        await sprintsApi.update(sprint.id, input)
+        notifySuccess(`${input.name} updated`)
+      } else {
+        await sprintsApi.create(projectId, input)
+        notifySuccess(`${input.name} created`)
+      }
       onSaved()
       onClose()
     } catch (error) {
@@ -79,7 +84,7 @@ function SprintForm({ projectId, suggestedName, onClose, onSaved }: Omit<SprintF
             Cancel
           </Button>
           <Button type="submit" loading={saving}>
-            Create sprint
+            {sprint ? 'Save changes' : 'Create sprint'}
           </Button>
         </Group>
       </Stack>

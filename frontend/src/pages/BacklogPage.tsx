@@ -9,7 +9,7 @@ import { SprintStatusBadge, TypeBadge } from '../components/IssueBadges'
 import { IssueFormModal } from '../components/IssueFormModal'
 import { IssueTable } from '../components/IssueTable'
 import { PageLoader } from '../components/PageLoader'
-import { useCurrentProject } from '../components/ProjectLayout'
+import { useCurrentProject, useProjectAccess } from '../components/ProjectLayout'
 import { useDragSensors } from '../hooks/useDragSensors'
 import { useProjectData } from '../hooks/useProjectData'
 import type { Issue } from '../types'
@@ -18,6 +18,7 @@ import { notifySuccess } from '../utils/notify'
 
 export function BacklogPage() {
   const project = useCurrentProject()
+  const { canEdit, isAdmin } = useProjectAccess()
   const { issues, sprints, users, loading, reload, updateIssue } = useProjectData(project.id)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Issue | null>(null)
@@ -59,18 +60,26 @@ export function BacklogPage() {
     await reload()
   }
 
-  const tableProps = { sprints, onEdit: openForm, onDelete: setDeleting, onMoveToSprint: moveToSprint }
+  const tableProps = {
+    sprints,
+    onEdit: openForm,
+    onDelete: isAdmin ? setDeleting : undefined,
+    onMoveToSprint: moveToSprint,
+    readOnly: !canEdit,
+  }
 
   return (
     <Stack>
       <Group justify="space-between">
         <Title order={3}>Backlog</Title>
-        <Button onClick={() => openForm(null)}>Create issue</Button>
+        {canEdit && <Button onClick={() => openForm(null)}>Create issue</Button>}
       </Group>
 
-      <Text size="sm" c="dimmed">
-        Drag issues between the backlog and any planned or active sprint to plan your work.
-      </Text>
+      {canEdit && (
+        <Text size="sm" c="dimmed">
+          Drag issues between the backlog and any planned or active sprint to plan your work.
+        </Text>
+      )}
 
       <DndContext
         sensors={sensors}
@@ -94,7 +103,7 @@ export function BacklogPage() {
             )}
             <IssueTable
               issues={issues.filter((issue) => issue.sprint_id === sprint.id)}
-              emptyMessage="No issues in this sprint yet. Drag issues here from the backlog."
+              emptyMessage={canEdit ? 'No issues in this sprint yet. Drag issues here from the backlog.' : 'No issues in this sprint.'}
               {...tableProps}
             />
           </BacklogSection>
@@ -107,12 +116,16 @@ export function BacklogPage() {
               {backlog.length} {backlog.length === 1 ? 'issue' : 'issues'}
             </Text>
           </Group>
-          {openSprints.length === 0 && (
+          {canEdit && openSprints.length === 0 && (
             <Text size="sm" c="dimmed" mb="xs">
               Tip: create a sprint on the Sprints tab, then move issues into it.
             </Text>
           )}
-          <IssueTable issues={backlog} emptyMessage="The backlog is empty. Create an issue to get started." {...tableProps} />
+          <IssueTable
+            issues={backlog}
+            emptyMessage={canEdit ? 'The backlog is empty. Create an issue to get started.' : 'The backlog is empty.'}
+            {...tableProps}
+          />
         </BacklogSection>
 
         <DragOverlay>

@@ -87,15 +87,28 @@ def test_sprint_from_another_project_is_rejected(client, db, auth_headers, proje
     assert response.json()["detail"] == "That sprint does not belong to this project"
 
 
-def test_delete_issue(client, auth_headers, project):
+def test_admin_can_delete_issue(client, auth_headers, admin_headers, project):
     issue = create_issue(client, auth_headers, project).json()
-    assert client.delete(f"/api/issues/{issue['id']}", headers=auth_headers).status_code == 204
+    assert client.delete(f"/api/issues/{issue['id']}", headers=admin_headers).status_code == 204
     assert client.get(f"/api/issues/{issue['id']}", headers=auth_headers).status_code == 404
 
 
-def test_other_users_cannot_see_or_change_issues(client, auth_headers, project):
+def test_regular_user_cannot_delete_issue(client, auth_headers, project):
+    issue = create_issue(client, auth_headers, project).json()
+    response = client.delete(f"/api/issues/{issue['id']}", headers=auth_headers)
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Only admins can do this"
+    assert client.get(f"/api/issues/{issue['id']}", headers=auth_headers).status_code == 200
+
+
+def test_other_users_can_read_but_not_change_issues(client, auth_headers, project):
     issue = create_issue(client, auth_headers, project).json()
     bob = login_headers(client, "bob")
-    assert client.get(f"/api/issues/{issue['id']}", headers=bob).status_code == 404
-    assert client.delete(f"/api/issues/{issue['id']}", headers=bob).status_code == 404
-    assert client.get(f"/api/projects/{project['id']}/issues", headers=bob).status_code == 404
+    assert client.get(f"/api/issues/{issue['id']}", headers=bob).status_code == 200
+    assert len(client.get(f"/api/projects/{project['id']}/issues", headers=bob).json()) == 1
+
+    body = {"title": "Changed by bob", "status": "done"}
+    response = client.put(f"/api/issues/{issue['id']}", json=body, headers=bob)
+    assert response.status_code == 403
+    assert response.json()["detail"] == "You can only change your own projects"
+    assert create_issue(client, bob, project).status_code == 403

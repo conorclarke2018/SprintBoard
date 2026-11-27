@@ -9,13 +9,24 @@ interface IssueTableProps {
   sprints: Sprint[]
   emptyMessage: string
   onEdit: (issue: Issue) => void
-  onDelete: (issue: Issue) => void
+  /** Only passed for admins, who are the only users allowed to delete. */
+  onDelete?: (issue: Issue) => void
   onMoveToSprint: (issue: Issue, sprintId: number | null) => void
+  /** Show the issues without any way to change them. */
+  readOnly?: boolean
 }
 
 const BACKLOG_VALUE = 'backlog'
 
-export function IssueTable({ issues, sprints, emptyMessage, onEdit, onDelete, onMoveToSprint }: IssueTableProps) {
+export function IssueTable({
+  issues,
+  sprints,
+  emptyMessage,
+  onEdit,
+  onDelete,
+  onMoveToSprint,
+  readOnly = false,
+}: IssueTableProps) {
   if (issues.length === 0) {
     return (
       <Text c="dimmed" size="sm" py="sm">
@@ -36,7 +47,7 @@ export function IssueTable({ issues, sprints, emptyMessage, onEdit, onDelete, on
       <Table verticalSpacing="xs" highlightOnHover>
         <Table.Thead>
           <Table.Tr>
-            <Table.Th w={28} />
+            {!readOnly && <Table.Th w={28} />}
             <Table.Th w={80}>Key</Table.Th>
             <Table.Th>Title</Table.Th>
             <Table.Th w={90}>Type</Table.Th>
@@ -45,24 +56,30 @@ export function IssueTable({ issues, sprints, emptyMessage, onEdit, onDelete, on
             <Table.Th w={110}>Assignee</Table.Th>
             <Table.Th w={110}>Status</Table.Th>
             <Table.Th w={150}>Sprint</Table.Th>
-            <Table.Th w={80} />
+            {onDelete && <Table.Th w={80} />}
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
           {issues.map((issue) => (
-            <DraggableRow key={issue.id} issue={issue}>
-              <Table.Td c="dimmed" aria-hidden>
-                ⠿
-              </Table.Td>
+            <DraggableRow key={issue.id} issue={issue} disabled={readOnly}>
+              {!readOnly && (
+                <Table.Td c="dimmed" aria-hidden>
+                  ⠿
+                </Table.Td>
+              )}
               <Table.Td>
                 <Text size="sm" c="dimmed" ff="monospace">
                   {issue.key}
                 </Text>
               </Table.Td>
               <Table.Td>
-                <Anchor component="button" type="button" size="sm" onClick={() => onEdit(issue)} ta="left">
-                  {issue.title}
-                </Anchor>
+                {readOnly ? (
+                  <Text size="sm">{issue.title}</Text>
+                ) : (
+                  <Anchor component="button" type="button" size="sm" onClick={() => onEdit(issue)} ta="left">
+                    {issue.title}
+                  </Anchor>
+                )}
               </Table.Td>
               <Table.Td>
                 <TypeBadge type={issue.type} />
@@ -88,19 +105,22 @@ export function IssueTable({ issues, sprints, emptyMessage, onEdit, onDelete, on
                   data={moveOptions}
                   value={issue.sprint_id === null ? BACKLOG_VALUE : String(issue.sprint_id)}
                   allowDeselect={false}
+                  disabled={readOnly}
                   onChange={(value) => {
                     if (!value) return
                     onMoveToSprint(issue, value === BACKLOG_VALUE ? null : Number(value))
                   }}
                 />
               </Table.Td>
-              <Table.Td>
-                <Group gap={4} justify="flex-end" wrap="nowrap">
-                  <Button size="compact-xs" variant="subtle" color="red" onClick={() => onDelete(issue)}>
-                    Delete
-                  </Button>
-                </Group>
-              </Table.Td>
+              {onDelete && (
+                <Table.Td>
+                  <Group gap={4} justify="flex-end" wrap="nowrap">
+                    <Button size="compact-xs" variant="subtle" color="red" onClick={() => onDelete(issue)}>
+                      Delete
+                    </Button>
+                  </Group>
+                </Table.Td>
+              )}
             </DraggableRow>
           ))}
         </Table.Tbody>
@@ -109,11 +129,14 @@ export function IssueTable({ issues, sprints, emptyMessage, onEdit, onDelete, on
   )
 }
 
-function DraggableRow({ issue, children }: { issue: Issue; children: ReactNode }) {
+function DraggableRow({ issue, disabled, children }: { issue: Issue; disabled: boolean; children: ReactNode }) {
   const { setNodeRef, attributes, listeners, isDragging } = useDraggable({
     id: issue.id,
     data: { issue },
+    disabled,
   })
+
+  if (disabled) return <Table.Tr>{children}</Table.Tr>
 
   return (
     <Table.Tr

@@ -100,12 +100,16 @@ export function ProjectsPage() {
                       Review
                     </Button>
                   )}
-                  <Button size="xs" variant="default" onClick={() => openForm(project)}>
-                    {project.status === 'rejected' && !isAdmin ? 'Edit & resubmit' : 'Edit'}
-                  </Button>
-                  <Button size="xs" variant="subtle" color="red" onClick={() => setDeleting(project)}>
-                    Delete
-                  </Button>
+                  {(isAdmin || project.owner.id === user?.id) && (
+                    <Button size="xs" variant="default" onClick={() => openForm(project)}>
+                      {project.status === 'rejected' && !isAdmin ? 'Edit & resubmit' : 'Edit'}
+                    </Button>
+                  )}
+                  {isAdmin && (
+                    <Button size="xs" variant="subtle" color="red" onClick={() => setDeleting(project)}>
+                      Delete
+                    </Button>
+                  )}
                 </Group>
               </Stack>
             </Card>

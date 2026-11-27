@@ -1,12 +1,21 @@
 import { Anchor, AppShell, Badge, Button, Container, Group, Text } from '@mantine/core'
+import { useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { usePendingCounts } from '../hooks/usePendingCounts'
+import { notifySuccess } from '../utils/notify'
+import { ConfirmModal } from './ConfirmModal'
 
 export function AppLayout() {
   const { user, logout } = useAuth()
   const isAdmin = user?.role === 'admin'
   const pending = usePendingCounts(isAdmin)
+  const [confirmingLogout, setConfirmingLogout] = useState(false)
+
+  async function handleLogout() {
+    logout()
+    notifySuccess('You have been logged out')
+  }
 
   return (
     <AppShell header={{ height: 60 }} padding="md">
@@ -20,6 +29,11 @@ export function AppLayout() {
               <Anchor component={NavLink} to="/" end size="sm" c="dimmed">
                 Projects
               </Anchor>
+              {!isAdmin && (
+                <Anchor component={NavLink} to="/people" size="sm" c="dimmed">
+                  People
+                </Anchor>
+              )}
               {isAdmin && (
                 <Anchor component={NavLink} to="/admin/requests" size="sm" c="dimmed">
                   <Group gap={4} wrap="nowrap">
@@ -54,7 +68,7 @@ export function AppLayout() {
                   Admin
                 </Badge>
               )}
-              <Button variant="default" size="xs" onClick={logout}>
+              <Button variant="default" size="xs" onClick={() => setConfirmingLogout(true)}>
                 Log out
               </Button>
             </Group>
@@ -67,6 +81,15 @@ export function AppLayout() {
           <Outlet />
         </Container>
       </AppShell.Main>
+
+      <ConfirmModal
+        opened={confirmingLogout}
+        title="Log out?"
+        message="You will need to log in again to use SprintBoard."
+        confirmLabel="Log out"
+        onConfirm={handleLogout}
+        onClose={() => setConfirmingLogout(false)}
+      />
     </AppShell>
   )
 }

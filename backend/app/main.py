@@ -13,6 +13,7 @@ from app import models  # noqa: F401  (registers all tables)
 from app.config import settings
 from app.core.error_handlers import register_exception_handlers
 from app.database import Base, SessionLocal, engine
+from app.demo_data import create_demo_data
 from app.logging_config import setup_logging
 from app.routers import admin, auth, issues, projects, sprints
 from app.services import user_service
@@ -26,9 +27,11 @@ logger = logging.getLogger("app")
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     Base.metadata.create_all(engine)
-    if settings.admin_username and settings.admin_password:
-        with SessionLocal() as db:
+    with SessionLocal() as db:
+        if settings.admin_username and settings.admin_password:
             user_service.ensure_admin_account(db, settings.admin_username, settings.admin_password)
+        if settings.load_demo_data:
+            create_demo_data(db)
     logger.info("SprintBoard started")
     yield
 
@@ -44,6 +47,7 @@ for router in (auth.router, projects.router, issues.router, sprints.router, admi
 def health() -> dict[str, str]:
     """Simple check that the API is running."""
     return {"status": "ok"}
+
 
 if FRONTEND_DIST.is_dir():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
